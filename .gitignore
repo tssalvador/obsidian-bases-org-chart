@@ -1,0 +1,9 @@
+node_modules/
+*.log
+*.js.map
+.DS_Store
+.hotreload
+data.json
+.test-build/
+# Built output; attached to GitHub releases instead
+main.js

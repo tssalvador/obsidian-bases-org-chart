@@ -1,0 +1,9 @@
+{
+  "id": "bases-org-chart",
+  "name": "Bases Org Chart",
+  "version": "0.0.1",
+  "minAppVersion": "1.13.0",
+  "description": "Shows notes as an interactive org chart in Bases, linking each note to its manager through a property.",
+  "author": "Tiago Souza",
+  "isDesktopOnly": true
+}

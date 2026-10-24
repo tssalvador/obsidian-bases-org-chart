@@ -1,0 +1,399 @@
+.org-chart-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* ---- Toolbar ---- */
+.org-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-3);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.org-chart-status {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.org-chart-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+}
+
+.org-chart-tool.is-active {
+  color: var(--interactive-accent);
+  background-color: var(--background-modifier-hover);
+}
+
+.org-chart-tool-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 var(--size-2-1);
+  background-color: var(--background-modifier-border);
+}
+
+.org-chart-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.org-chart-tools .org-chart-zoom-level {
+  min-width: 48px;
+  height: var(--input-height);
+  padding: 0 var(--size-2-2);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+.org-chart-tools .org-chart-zoom-level:hover {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
+}
+
+/* The find box is Obsidian's search component, wrapped in its container. */
+.org-chart-tools .search-input-container {
+  width: 160px;
+}
+
+.org-chart-find {
+  font-size: var(--font-ui-small);
+}
+
+/* ---- Canvas ---- */
+.org-chart-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+.org-chart-canvas.is-panning {
+  cursor: grabbing;
+}
+
+.org-chart-canvas.is-panning .org-chart-node {
+  cursor: grabbing;
+}
+
+.org-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+
+.org-chart-empty {
+  padding: var(--size-4-4);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* ---- Groups (Bases' Group option) ---- */
+.org-chart-group-box {
+  fill: var(--background-secondary-alt, var(--background-secondary));
+  fill-opacity: 0.5;
+  stroke: var(--background-modifier-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.org-chart-group-label {
+  fill: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-bold);
+}
+
+.org-chart-group-count {
+  fill: var(--text-faint);
+  font-weight: normal;
+}
+
+/* ---- Edges ---- */
+.org-chart-edge {
+  fill: none;
+  stroke: var(--background-modifier-border-hover);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.org-chart-edge.is-ghost {
+  stroke-dasharray: 4 3;
+}
+
+.org-chart-edge.is-cross {
+  stroke: var(--text-muted);
+}
+
+.org-chart-dotted {
+  pointer-events: none;
+}
+
+.org-chart-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  vector-effect: non-scaling-stroke;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.org-chart-canvas.is-dragging .org-chart-edge-hit {
+  pointer-events: none;
+}
+
+
+.org-chart-edge.is-dotted {
+  stroke: var(--text-faint);
+  stroke-dasharray: 1.5 4;
+  stroke-linecap: round;
+  stroke-width: 1.75;
+  opacity: 0.8;
+}
+
+/* Hovering a line's hit area: must come after the dotted rule to win. */
+.org-chart-edge.is-hover {
+  stroke: var(--text-error);
+  stroke-width: 2.5;
+  stroke-dasharray: none;
+  opacity: 1;
+}
+
+.org-chart-edge.is-dotted.is-hover {
+  stroke-width: 3;
+  stroke-dasharray: 2 4;
+}
+
+/* ---- Cards ---- */
+.org-chart-card {
+  fill: var(--background-secondary);
+  stroke: var(--background-modifier-border);
+  stroke-width: 1;
+}
+
+.org-chart-node {
+  cursor: default;
+  outline: none;
+}
+
+.org-chart-node:hover > .org-chart-card,
+.org-chart-node:focus > .org-chart-card {
+  stroke: var(--interactive-accent);
+  stroke-width: 1.5;
+}
+
+.org-chart-node.is-ghost > .org-chart-card {
+  fill: transparent;
+  stroke-dasharray: 4 3;
+}
+
+.org-chart-node.is-collapsed {
+  cursor: zoom-in;
+}
+
+.org-chart-node.is-former {
+  opacity: 0.55;
+}
+
+.org-chart-node.is-former > .org-chart-card {
+  stroke-dasharray: 6 3;
+}
+
+.org-chart-node.is-former .org-chart-title {
+  font-style: italic;
+}
+
+.org-chart-avatar.is-initials circle {
+  fill: var(--background-modifier-hover);
+}
+
+.org-chart-node.is-ghost .org-chart-avatar.is-initials circle {
+  fill: none;
+  stroke: var(--background-modifier-border);
+  stroke-dasharray: 3 2;
+}
+
+.org-chart-avatar.is-initials text {
+  fill: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+}
+
+.org-chart-title {
+  fill: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+}
+
+.org-chart-node.is-ghost .org-chart-title,
+.org-chart-subtitle {
+  fill: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: normal;
+}
+
+.org-chart-node.is-selected > .org-chart-card {
+  stroke: var(--interactive-accent);
+  stroke-width: 2.5;
+  fill: var(--background-modifier-hover);
+}
+
+/* ---- Drag to change manager ---- */
+.org-chart-canvas.is-dragging,
+.org-chart-canvas.is-dragging .org-chart-node {
+  cursor: grabbing;
+}
+
+.org-chart-node.is-drag-source {
+  opacity: 0.35;
+}
+
+.org-chart-node.is-drag-ghost {
+  opacity: 0.9;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.org-chart-node.is-drop-target > .org-chart-card {
+  stroke: var(--interactive-accent);
+  stroke-width: 3;
+  fill: var(--background-modifier-hover);
+}
+
+.org-chart-node.is-drop-invalid > .org-chart-card {
+  stroke: var(--text-error);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+}
+
+/* ---- Reports of former members ---- */
+.org-chart-status .org-chart-warning {
+  padding: 0;
+  height: auto;
+  background: none;
+  box-shadow: none;
+  color: var(--text-warning);
+  font-size: inherit;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+
+.org-chart-status .org-chart-warning:hover {
+  text-decoration: underline;
+  background: none;
+}
+
+.org-chart-node.is-departed > .org-chart-card {
+  stroke: var(--text-warning);
+  stroke-width: 2;
+}
+
+.org-chart-node.is-departed .org-chart-subtitle {
+  fill: var(--text-warning);
+}
+
+.org-chart-edge.is-stranded {
+  stroke: var(--text-warning);
+}
+
+.org-chart-badge circle {
+  fill: var(--text-warning);
+}
+
+.org-chart-badge text {
+  fill: var(--background-primary);
+  font-size: 11px;
+  font-weight: var(--font-bold);
+}
+
+/* ---- Collapse toggle ---- */
+.org-chart-toggle {
+  cursor: pointer;
+  outline: none;
+}
+
+.org-chart-toggle rect {
+  fill: var(--background-primary);
+  stroke: var(--background-modifier-border-hover);
+  stroke-width: 1;
+}
+
+.org-chart-toggle text {
+  fill: var(--text-muted);
+  font-size: 10px;
+  font-weight: var(--font-semibold);
+}
+
+.org-chart-toggle:hover rect,
+.org-chart-toggle:focus rect {
+  stroke: var(--interactive-accent);
+}
+
+.org-chart-toggle.is-collapsed rect {
+  fill: var(--interactive-accent);
+  stroke: var(--interactive-accent);
+}
+
+.org-chart-toggle.is-collapsed text {
+  fill: var(--text-on-accent);
+}
+
+/* ---- Find ---- */
+.org-chart-canvas.is-finding .org-chart-node:not(.is-match) {
+  opacity: 0.35;
+}
+
+.org-chart-node.is-match > .org-chart-card {
+  stroke: var(--text-accent);
+  stroke-width: 1.5;
+}
+
+.org-chart-node.is-current > .org-chart-card {
+  stroke: var(--interactive-accent);
+  stroke-width: 3;
+}
+
+.org-chart-modal-option {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* Embedded in a note (![[Org Chart.base#View]]): Bases gives the view a short
+   default height; give the chart room to be useful. */
+.bases-embed .org-chart-root {
+  height: 520px;
+}
+
+/* Settings: card field rows (name/description hidden; the input says it all) */
+.org-chart-field-row .setting-item-info {
+  display: none;
+}
+
+.org-chart-field-row .setting-item-control {
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.org-chart-field-row input[type="text"] {
+  flex: 1;
+}
