@@ -21,7 +21,7 @@
   "author": "Tiago Souza",
   "license": "MIT",
   "devDependencies": {
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "10.0.1",
     "esbuild": "0.28.2",
     "eslint": "9.39.5",
     "eslint-plugin-obsidianmd": "0.4.2",
