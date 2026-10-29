@@ -211,6 +211,15 @@ test("with the note's menu off, the chart's actions come before Open in new tab"
   assert.deepEqual(ran, ["open"]);
 });
 
+test("the card menu offers Edit fields first, only when there's something to edit", () => {
+  const { menu, items } = recordingMenu();
+  const ran: string[] = [];
+  fillCardMenu(menu, { edit: () => ran.push("edit"), addDotted: () => ran.push("dotted"), leave: [], open: () => ran.push("open") });
+  assert.deepEqual(titles(items), [`Edit fields [${MENU_SECTION}]`, `Add dotted-line manager… [${MENU_SECTION}]`, "Open in new tab [open]"]);
+  (items[0] as MenuRecord).run?.();
+  assert.deepEqual(ran, ["edit"]);
+});
+
 // ---- Where the chart is ----
 
 test("only a chart in its own Bases tab counts as being in one", () => {

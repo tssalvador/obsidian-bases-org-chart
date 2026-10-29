@@ -52,3 +52,20 @@ export function ensureListTypes(app: unknown, names: string[]): string[] {
   }
   return changed;
 }
+
+/** The type assigned to a property (e.g. "text", "number", "multitext"), or null when none or unknown. */
+export function propertyType(app: unknown, name: string): string | null {
+  const types = registry(app);
+  if (!name || typeof types?.getAssignedWidget !== "function") return null;
+  try {
+    const type = types.getAssignedWidget(name);
+    return typeof type === "string" ? type : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Types whose values aren't a single line of text: lists, checkboxes. */
+export function isMultiValueType(type: string | null): boolean {
+  return type !== null && (LIST_TYPES.has(type) || type === "checkbox");
+}

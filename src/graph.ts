@@ -131,6 +131,19 @@ export function editableList(v: unknown): string[] | null {
 }
 
 /**
+ * A property holding one plain value, as text ("" when empty or absent), or
+ * null when it holds anything else (a list, a link, a checkbox, an object).
+ * Used before editing a card field in place.
+ */
+export function singleText(v: unknown): string | null {
+  if (v == null || v === "") return "";
+  if (typeof v === "number") return Number.isFinite(v) ? String(v) : null;
+  if (typeof v !== "string") return null;
+  // A link is shown by its alias; editing that text would lose the link.
+  return /^!?\[\[.*\]\]$/.test(v.trim()) ? null : v;
+}
+
+/**
  * A frontmatter value by property name: the exact key, else a key differing
  * only in case (Obsidian treats property names case-insensitively).
  */

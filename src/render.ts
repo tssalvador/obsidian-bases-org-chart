@@ -73,8 +73,8 @@ export function curvePath(layout: Layout, from: string, to: string, dir: Directi
 
 interface RenderHandlers {
   onClick(node: OrgNode, evt: MouseEvent): void;
-  /** Open the note (Enter on a focused card). */
-  onOpen(node: OrgNode): void;
+  /** Enter on a focused card. */
+  onActivate(node: OrgNode): void;
   onHover(node: OrgNode, evt: MouseEvent, targetEl: Element): void;
   onToggle(node: OrgNode): void;
   /** A reporting line (manager -> report) was clicked. */
@@ -261,7 +261,7 @@ export function renderSvg(
       ...fieldLines,
       node.departed ? `⚠ Former member with ${node.strandedReports} current report${node.strandedReports === 1 ? "" : "s"}` : "",
       node.stranded ? "⚠ Main manager is a former member" : "",
-      collapsed.has(nid) ? "Click to expand team · double-click to open" : "",
+      collapsed.has(nid) ? "Click to expand team · double-click to edit" : "",
     ]
       .filter(Boolean)
       .join("\n");
@@ -300,7 +300,10 @@ export function renderSvg(
     if (node.file || collapsed.has(nid)) {
       g.addEventListener("click", (evt) => handlers.onClick(node, evt));
       g.addEventListener("keydown", (evt) => {
-        if (evt.key === "Enter" && evt.target === g) handlers.onOpen(node);
+        if (evt.key === "Enter" && evt.target === g) {
+          evt.preventDefault();
+          handlers.onActivate(node);
+        }
       });
       g.addEventListener("mouseover", (evt) => handlers.onHover(node, evt, g));
     }
