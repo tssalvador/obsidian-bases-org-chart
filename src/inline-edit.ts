@@ -61,8 +61,7 @@ export function fieldEdits(fields: EditableField[], typed: ReadonlyMap<string, s
   for (const f of fields) {
     const text = typed.get(f.property);
     if (text === undefined || text.trim() === f.value.trim()) continue;
-    // A name can't be blank: the card would fall back to the file name, which is rarely what's meant.
-    if (f.name && text.trim() === "") continue;
+    // A blank name empties the property, so the card falls back to the file name.
     edits.push({ prop: f.property, values: [text], expected: [f.value], single: f.number ? "number" : "text" });
   }
   return edits;

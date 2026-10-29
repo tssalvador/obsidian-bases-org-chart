@@ -712,6 +712,7 @@ class OrgChartView extends BasesView implements HoverParent {
     const scope = new Scope(this.app.scope);
     const panel: CardEditor = new CardEditor(this.rootEl, {
       title: node.title,
+      fileName: node.file.basename,
       fields,
       onSave: (typed) => void this.saveFields(node, fields, typed),
       onClose: () => {

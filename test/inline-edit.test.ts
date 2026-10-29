@@ -64,7 +64,7 @@ test("each property appears once, matched regardless of case; numbers are marked
 
 // ---- What gets saved ----
 
-test("only changed fields are saved, as single values; a blank name is ignored", () => {
+test("only changed fields are saved, as single values; a blank name empties it, falling back to the file name", () => {
   const fs = editableFields(
     { title: "Ada", role: "CEO", level: 7 },
     { nameProperty: "title", fields: fields(["role", true], ["phone", true], ["level", true]) },
@@ -73,9 +73,13 @@ test("only changed fields are saved, as single values; a blank name is ignored",
   );
   const edits = fieldEdits(fs, new Map([["title", "  "], ["role", "CEO "], ["phone", "0491 570 110"], ["level", "8"]]));
   assert.deepEqual(edits, [
+    { prop: "title", values: ["  "], expected: ["Ada"], single: "text" },
     { prop: "phone", values: ["0491 570 110"], expected: [""], single: "text" },
     { prop: "level", values: ["8"], expected: ["7"], single: "number" },
   ]);
+  const fm: Record<string, unknown> = { title: "Ada" };
+  applyEdits(fm, [edits[0]]);
+  assert.deepEqual(fm, { title: null }, "stored empty, so the card shows the file name");
 });
 
 test("a single edit writes one value, keeps the note's spelling, and undoes cleanly", async () => {

@@ -9,6 +9,8 @@ import type { EditableField } from "./inline-edit";
 export interface CardEditorOptions {
   /** The person's name, for the panel's accessible label. */
   title: string;
+  /** The note's file name (without extension): what the card shows when the name property is empty. */
+  fileName: string;
   fields: EditableField[];
   /** Called once, with the text in each box by property, when the panel saves. */
   onSave(typed: Map<string, string>): void;
@@ -24,17 +26,20 @@ export class CardEditor {
   private closed = false;
 
   constructor(private host: HTMLElement, private opts: CardEditorOptions) {
-    this.el = host.createDiv({ cls: "org-chart-editor", attr: { role: "group", "aria-label": `Edit ${opts.title}` } });
+    this.el = host.createDiv({ cls: "org-chart-editor", attr: { role: "group", "aria-label": `Edit ${opts.title}`, tabindex: "-1" } });
+    // The note being edited, so it's clear which file a name falls back to.
+    this.el.createDiv({ cls: "org-chart-editor-file", text: opts.fileName });
     for (const f of opts.fields) {
       const row = this.el.createEl("label", { cls: "org-chart-editor-row" });
       row.createSpan({ cls: "org-chart-editor-label", text: f.name ? `${f.property} (name)` : f.property });
       const input = row.createEl("input", {
         cls: f.name ? "org-chart-editor-input is-name" : "org-chart-editor-input",
-        // An empty name property: the card shows the file name, so suggest it.
-        attr: { type: "text", spellcheck: "false", placeholder: f.name && !f.value ? opts.title : f.property },
+        // An empty name falls back to the file name, so that's what the box suggests.
+        attr: { type: "text", spellcheck: "false", placeholder: f.name ? opts.fileName : f.property },
       });
       input.value = f.value;
       this.inputs.set(f.property, input);
+      if (f.name) row.createSpan({ cls: "org-chart-editor-note", text: "Leave empty to use the file name" });
     }
     this.el.createDiv({ cls: "org-chart-editor-hint", text: "Enter to save · Esc to cancel" });
 
@@ -43,6 +48,12 @@ export class CardEditor {
     for (const type of ["pointerdown", "mousedown", "click", "dblclick", "contextmenu", "wheel"] as const) {
       this.el.addEventListener(type, (e) => e.stopPropagation());
     }
+    // Pressing on a label, the hint or the padding would otherwise move focus
+    // out of the panel (and so save and close it) before the click lands.
+    // The box keeps focus; clicking a label still moves to its box on click.
+    this.el.addEventListener("mousedown", (e) => {
+      if (!(e.target instanceof HTMLInputElement)) e.preventDefault();
+    });
     this.el.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.isComposing) return;
