@@ -26,8 +26,9 @@ export interface EditableOptions {
 
 /**
  * The card's editable properties, in card order: the name (when it comes
- * from a property), then each shown field holding a single plain value.
- * Lists, links, checkboxes and other values are left out, as are properties
+ * from a property), then each shown field holding a single value (text,
+ * a number, or one link, edited as written). Lists, checkboxes and other
+ * values are left out, as are properties
  * whose type (`typeOf`, e.g. from Obsidian's property registry) is a list or
  * checkbox even when they're empty. Each property appears once.
  */

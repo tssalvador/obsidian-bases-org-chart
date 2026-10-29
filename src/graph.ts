@@ -132,15 +132,15 @@ export function editableList(v: unknown): string[] | null {
 
 /**
  * A property holding one plain value, as text ("" when empty or absent), or
- * null when it holds anything else (a list, a link, a checkbox, an object).
+ * null when it holds anything else (a list, a checkbox, an object). A link
+ * is returned as written ("[[Name|Alias]]"), so editing it shows the brackets
+ * and saves exactly what's typed.
  * Used before editing a card field in place.
  */
 export function singleText(v: unknown): string | null {
   if (v == null || v === "") return "";
   if (typeof v === "number") return Number.isFinite(v) ? String(v) : null;
-  if (typeof v !== "string") return null;
-  // A link is shown by its alias; editing that text would lose the link.
-  return /^!?\[\[.*\]\]$/.test(v.trim()) ? null : v;
+  return typeof v === "string" ? v : null;
 }
 
 /**

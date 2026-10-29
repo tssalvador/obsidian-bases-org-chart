@@ -10,16 +10,15 @@ const fields = (...props: [string, boolean][]) => props.map(([property, show]) =
 
 // ---- What can be edited ----
 
-test("singleText accepts one plain value and refuses lists, links and other values", () => {
+test("singleText accepts one value, links as written, and refuses lists and other values", () => {
   assert.equal(singleText("CEO"), "CEO");
   assert.equal(singleText(42), "42");
   assert.equal(singleText(undefined), "");
   assert.equal(singleText(null), "");
   assert.equal(singleText(""), "");
   assert.equal(singleText(["CEO"]), null, "a list, even of one");
-  assert.equal(singleText("[[Acme]]"), null, "a link is shown by its alias; editing it would lose the link");
-  assert.equal(singleText("![[pic.png]]"), null);
-  assert.equal(singleText("See [[Acme]] for details"), "See [[Acme]] for details", "text with a link inside is still text");
+  assert.equal(singleText("[[Acme|Acme Corp]]"), "[[Acme|Acme Corp]]", "a link is edited as written, so it can be changed or removed");
+  assert.equal(singleText("![[pic.png]]"), "![[pic.png]]");
   assert.equal(singleText(true), null);
   assert.equal(singleText({ a: 1 }), null);
   assert.equal(singleText(Number.NaN), null);
@@ -42,7 +41,7 @@ test("a name from the file name isn't editable; empty shown fields are, so they 
   assert.deepEqual(missingTitle.map((f) => [f.property, f.value]), [["title", ""]], "a name property can be filled in");
 });
 
-test("lists, links, checkboxes and list-typed properties are left out", () => {
+test("lists, checkboxes and list-typed properties are left out; a single link stays editable", () => {
   const fm = { teams: ["Eng"], manager: "[[Ben Ops]]", active: true, tags: undefined, role: "CTO" };
   const types: Record<string, string> = { tags: "tags", active: "checkbox" };
   const got = editableFields(
@@ -51,7 +50,15 @@ test("lists, links, checkboxes and list-typed properties are left out", () => {
     (p) => types[p] ?? null,
     isMultiValueType
   );
-  assert.deepEqual(got.map((f) => f.property), ["role"], "an empty property whose type is a list stays read-only too");
+  assert.deepEqual(got.map((f) => [f.property, f.value]), [["manager", "[[Ben Ops]]"], ["role", "CTO"]], "an empty property whose type is a list stays read-only too");
+});
+
+test("a name typed as a link can be edited back to plain text", () => {
+  const [name] = editableFields({ title: "[[Test]]" }, { nameProperty: "title", fields: [] }, noTypes, isMultiValueType);
+  assert.deepEqual([name.property, name.value, name.name], ["title", "[[Test]]", true], "the box doesn't disappear");
+  const fm: Record<string, unknown> = { title: "[[Test]]" };
+  applyEdits(fm, fieldEdits([name], new Map([["title", "Eve Eng"]])));
+  assert.deepEqual(fm, { title: "Eve Eng" });
 });
 
 test("each property appears once, matched regardless of case; numbers are marked", () => {
