@@ -41,11 +41,20 @@
 }
 
 .org-chart-editor-file {
+  align-self: flex-start;
+  max-width: 100%;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
+}
+
+.org-chart-editor-file:hover,
+.org-chart-editor-file:focus-visible {
+  color: var(--text-accent);
+  text-decoration: underline;
 }
 
 .org-chart-editor-note,

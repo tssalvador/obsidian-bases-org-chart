@@ -715,6 +715,8 @@ class OrgChartView extends BasesView implements HoverParent {
       fileName: node.file.basename,
       fields,
       onSave: (typed) => void this.saveFields(node, fields, typed),
+      // New tab by default; Obsidian's modifier combinations still pick a split or window.
+      onOpen: (evt) => this.openNote(node, Keymap.isModEvent(evt) || "tab"),
       onClose: () => {
         this.app.keymap.popScope(scope);
         if (this.editor?.panel === panel) this.editor = null;

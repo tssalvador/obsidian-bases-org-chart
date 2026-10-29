@@ -14,6 +14,8 @@ export interface CardEditorOptions {
   fields: EditableField[];
   /** Called once, with the text in each box by property, when the panel saves. */
   onSave(typed: Map<string, string>): void;
+  /** The file name was clicked: open the note (after saving). */
+  onOpen(evt: MouseEvent): void;
   /** Called once when the panel closes, saved or not. */
   onClose(): void;
 }
@@ -28,7 +30,18 @@ export class CardEditor {
   constructor(private host: HTMLElement, private opts: CardEditorOptions) {
     this.el = host.createDiv({ cls: "org-chart-editor", attr: { role: "group", "aria-label": `Edit ${opts.title}`, tabindex: "-1" } });
     // The note being edited, so it's clear which file a name falls back to.
-    this.el.createDiv({ cls: "org-chart-editor-file", text: opts.fileName });
+    // Clicking it saves what's typed and opens the note.
+    const file = this.el.createEl("a", {
+      cls: "org-chart-editor-file",
+      text: opts.fileName,
+      href: "#",
+      attr: { "aria-label": `Save and open ${opts.fileName}` },
+    });
+    file.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.close(true);
+      opts.onOpen(e);
+    });
     for (const f of opts.fields) {
       const row = this.el.createEl("label", { cls: "org-chart-editor-row" });
       row.createSpan({ cls: "org-chart-editor-label", text: f.name ? `${f.property} (name)` : f.property });
@@ -57,6 +70,8 @@ export class CardEditor {
     this.el.addEventListener("keydown", (e) => {
       e.stopPropagation();
       if (e.isComposing) return;
+      // Enter on the file name follows the link (save and open) rather than just saving.
+      if (e.key === "Enter" && e.target instanceof HTMLAnchorElement) return;
       if (e.key === "Enter") {
         e.preventDefault();
         this.close(true);
