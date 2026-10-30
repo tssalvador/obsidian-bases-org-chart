@@ -22,6 +22,8 @@ export interface MenuLike {
 export const MENU_SECTION = "org-chart";
 
 export interface CardMenuActions {
+  /** Edit the card's fields in place; offered only when it has something to edit. */
+  edit?: () => void;
   /** Add a dotted-line manager; offered only to someone with a main manager. */
   addDotted?: () => void;
   /** "Remove from …", one per value of the current membership property. */
@@ -37,7 +39,10 @@ export interface CardMenuActions {
 
 /** The chart's actions first, then either Open in new tab or the note's own menu with Delete file last. */
 export function fillCardMenu(menu: MenuLike, actions: CardMenuActions): void {
-  const { addDotted, noteMenu } = actions;
+  const { edit, addDotted, noteMenu } = actions;
+  if (edit) {
+    menu.addItem((i) => i.setSection(MENU_SECTION).setTitle("Edit fields").setIcon("pencil").onClick(edit));
+  }
   if (addDotted) {
     menu.addItem((i) => i.setSection(MENU_SECTION).setTitle("Add dotted-line manager…").setIcon("git-branch-plus").onClick(addDotted));
   }

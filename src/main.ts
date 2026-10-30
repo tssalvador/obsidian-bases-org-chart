@@ -35,7 +35,9 @@ import {
 } from "obsidian";
 import { asList, buildGraph, cardLines, collapseBelow, descendants, groupLabel, linkLabel, linkTarget, hasNote, markStranded, MAX_FIELDS, primaryParents, propValue, type NotedNode, type OrgGraph, type OrgNode } from "./graph";
 import { EditConflictError, restoreWrittenNotes, writeAll, type PropertyEdit } from "./write";
-import { ensureListTypes, propertyNames } from "./property-types";
+import { ensureListTypes, isMultiValueType, propertyNames, propertyType } from "./property-types";
+import { CardEditor } from "./card-editor";
+import { editableFields, fieldEdits, type EditableField } from "./inline-edit";
 import { addDotted, dropProblem, planLeave, reassignPlans, removeParent, setPrimary, type ReassignPlan } from "./edits";
 import { cardHeight, layoutGraph, layoutGroups, NODE_W, type GroupSpec, type Layout } from "./layout";
 import { fillCardMenu } from "./menu";
@@ -293,6 +295,10 @@ class OrgChartView extends BasesView implements HoverParent {
   private lastClick: { id: string; at: number } | null = null;
   private contentEl: SVGGElement | null = null;
   private drag: DragState | null = null;
+  /** The card being edited in place, if any. */
+  private editor: { id: string; panel: CardEditor } | null = null;
+  /** Bases sent new data while a card was being edited; applied when editing ends. */
+  private dataPending = false;
   private openFrame: number | null = null;
   private needsInitialOpen = false;
   private largeChartApprovedUpTo = 0;
@@ -343,6 +349,7 @@ class OrgChartView extends BasesView implements HoverParent {
     this.viewport = new Viewport(this.canvasEl, this);
     this.viewport.onChange = (t) => {
       this.zoomLabel.setButtonText(`${Math.round(t.k * 100)}%`);
+      this.placeEditor();
     };
     this.viewport.dragHandler = (e) => this.startCardDrag(e);
     // Scrolling pans only a chart in its own tab. Elsewhere (embedded in a
@@ -363,6 +370,8 @@ class OrgChartView extends BasesView implements HoverParent {
     this.registerEvent(settingsEvents.on(SETTINGS_CHANGED, () => this.onDataUpdated()));
     this.register(() => {
       this.endDrag(true);
+      // Typed text isn't lost when the view closes mid-edit.
+      this.closeEditor(true);
       if (this.openFrame !== null) this.canvasEl.win.cancelAnimationFrame(this.openFrame);
       this.openFrame = null;
       this.needsInitialOpen = false;
@@ -456,6 +465,11 @@ class OrgChartView extends BasesView implements HoverParent {
 
   // Called by Bases whenever the query results or view config change.
   onDataUpdated(): void {
+    // Redrawing would move the card from under the panel; wait until editing ends.
+    if (this.editor) {
+      this.dataPending = true;
+      return;
+    }
     const s = this.settings();
     const groups: BasesEntryGroup[] = this.data?.groupedData ?? [];
     // Grouped when Bases' Group option is set: several groups, or one with a value.
@@ -494,6 +508,11 @@ class OrgChartView extends BasesView implements HoverParent {
 
   private render(s: ViewSettings = this.settings(), anchor?: { id: string; sx: number; sy: number }): void {
     if (this.drag) this.endDrag(true);
+    if (this.editor) {
+      // Redrawing anyway (e.g. a team toggled): save the edit; no second redraw for pending data.
+      this.dataPending = false;
+      this.closeEditor(true);
+    }
     if (this.openFrame !== null) {
       this.canvasEl.win.cancelAnimationFrame(this.openFrame);
       this.openFrame = null;
@@ -584,6 +603,13 @@ class OrgChartView extends BasesView implements HoverParent {
 
     const content = renderSvg(this.canvasEl, graph, layout, s.direction, this.memory.collapsed, {
       onClick: (node: OrgNode, evt: MouseEvent) => {
+        // Mod-click opens the note (Cmd/Ctrl: new tab; with Alt or Shift: a split or window).
+        const where = Keymap.isModEvent(evt);
+        if (where && node.file) {
+          this.lastClick = null;
+          this.openNote(node, where);
+          return;
+        }
         // Double-click detected here rather than via "dblclick": expanding a
         // team re-renders between the two clicks, replacing the element.
         const now = Date.now();
@@ -591,8 +617,7 @@ class OrgChartView extends BasesView implements HoverParent {
         this.lastClick = { id: node.id, at: now };
         if (last && last.id === node.id && now - last.at < DOUBLE_CLICK_MS) {
           this.lastClick = null;
-          // New tab by default; modifier combos (e.g. split, window) still apply.
-          this.openNote(node, Keymap.isModEvent(evt) || "tab");
+          this.startEdit(node);
           return;
         }
         if (this.memory.collapsed.has(node.id)) {
@@ -602,7 +627,8 @@ class OrgChartView extends BasesView implements HoverParent {
         }
         this.select(node.id);
       },
-      onOpen: (node: OrgNode) => this.openNote(node, "tab"),
+      // Enter edits. (Mod+Enter and F2 are Obsidian's own shortcuts and never reach the card.)
+      onActivate: (node: OrgNode) => this.startEdit(node),
       onHover: (node: OrgNode, evt: MouseEvent, targetEl: Element) => {
         if (!node.file) return;
         this.app.workspace.trigger("hover-link", {
@@ -657,6 +683,82 @@ class OrgChartView extends BasesView implements HoverParent {
 
   private openNote(node: OrgNode, where: PaneType | boolean): void {
     if (node.file) void this.app.workspace.getLeaf(where).openFile(node.file);
+  }
+
+  // ---- Edit a card's name and fields in place ----
+
+  /** The card's properties that can be edited in place (see editableFields). */
+  private editableFieldsFor(node: NotedNode): EditableField[] {
+    const s = this.settings();
+    const fm = this.app.metadataCache.getFileCache(node.file)?.frontmatter;
+    return editableFields(fm, { nameProperty: s.nameProperty, fields: s.fields }, (p) => propertyType(this.app, p), isMultiValueType);
+  }
+
+  /** Edit the card in place; a placeholder, or a card with nothing editable, opens its note instead. */
+  private startEdit(node: OrgNode): void {
+    if (!hasNote(node) || node.ghost || node.file.extension !== "md") {
+      this.openNote(node, "tab");
+      return;
+    }
+    const fields = this.editableFieldsFor(node);
+    if (!fields.length) {
+      this.openNote(node, "tab");
+      return;
+    }
+    this.closeEditor(true);
+    if (!this.nodeEl(node.id)) return;
+    this.select(node.id);
+    // Escape cancels the edit, not whatever Obsidian would otherwise do with it.
+    const scope = new Scope(this.app.scope);
+    const panel: CardEditor = new CardEditor(this.rootEl, {
+      title: node.title,
+      fileName: node.file.basename,
+      fields,
+      onSave: (typed) => void this.saveFields(node, fields, typed),
+      // New tab by default; Obsidian's modifier combinations still pick a split or window.
+      onOpen: (evt) => this.openNote(node, Keymap.isModEvent(evt) || "tab"),
+      onClose: () => {
+        this.app.keymap.popScope(scope);
+        if (this.editor?.panel === panel) this.editor = null;
+        if (this.dataPending && !this.editor) {
+          this.dataPending = false;
+          this.onDataUpdated();
+        }
+      },
+    });
+    scope.register([], "Escape", () => {
+      panel.close(false);
+      return false;
+    });
+    this.app.keymap.pushScope(scope);
+    this.editor = { id: node.id, panel };
+    this.placeEditor();
+    panel.focus();
+  }
+
+  /** Keep the panel over its card as the chart pans and zooms. */
+  private placeEditor(): void {
+    const e = this.editor;
+    if (!e) return;
+    const card = this.nodeEl(e.id)?.querySelector(".org-chart-card");
+    if (card) e.panel.place(card.getBoundingClientRect());
+    else e.panel.close(true);
+  }
+
+  private closeEditor(save: boolean): void {
+    this.editor?.panel.close(save);
+  }
+
+  private async saveFields(node: NotedNode, fields: EditableField[], typed: Map<string, string>): Promise<void> {
+    const edits = fieldEdits(fields, typed);
+    if (!edits.length) return;
+    const props = edits.map((e) => e.prop).join(", ");
+    await this.writeNotes(
+      [{ file: node.file, edits }],
+      node.id,
+      `Updated ${node.title}'s ${props}.`,
+      `Undone: ${node.title}'s ${props} restored.`
+    );
   }
 
   private select(id: string | null): void {
@@ -904,9 +1006,10 @@ class OrgChartView extends BasesView implements HoverParent {
       ...(result.failed.length ? [`write failures in ${result.failed.join(", ")}`] : []),
     ];
 
-    // The properties written are lists: make sure Obsidian has them as List
+    // The reporting properties are lists: make sure Obsidian has them as List
     // too, including a view's own choice of parent or membership property.
-    ensureListTypes(this.app, changes.flatMap((c) => c.edits.map((e) => e.prop)));
+    // Card fields edited in place keep their own type.
+    ensureListTypes(this.app, changes.flatMap((c) => c.edits.filter((e) => !e.single).map((e) => e.prop)));
     const result = await writeAll(changes.map((c) => ({ target: c.file, label: c.file.basename, edits: c.edits })), process);
     if (!result.ok) {
       const problems = problemsIn(result.rollback);
@@ -959,6 +1062,7 @@ class OrgChartView extends BasesView implements HoverParent {
     const menu = Menu.forEvent(evt);
     const current = s.currentProperty ? this.values(file, s.currentProperty) : [];
     fillCardMenu(menu, {
+      edit: this.editableFieldsFor(node).length ? () => this.startEdit(node) : undefined,
       addDotted: this.currentManager(node) ? () => this.pickDottedManager(node) : undefined,
       leave: current.map((raw) => ({ label: linkLabel(raw), run: () => this.confirmLeave(node, raw) })),
       open: () => this.openNote(node, "tab"),

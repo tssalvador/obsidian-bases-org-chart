@@ -1,8 +1,66 @@
 .org-chart-root {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+
+/* ---- Editing a card in place ---- */
+.org-chart-editor {
+  position: absolute;
+  z-index: var(--layer-popover);
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  padding: var(--size-4-2);
+  background: var(--background-primary);
+  border: 1px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-s);
+}
+
+.org-chart-editor-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.org-chart-editor-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.org-chart-editor-input {
+  width: 100%;
+  font-size: var(--font-ui-small);
+}
+
+.org-chart-editor-input.is-name {
+  font-weight: var(--font-semibold);
+}
+
+.org-chart-editor-file {
+  align-self: flex-start;
+  max-width: 100%;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.org-chart-editor-file:hover,
+.org-chart-editor-file:focus-visible {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.org-chart-editor-note,
+.org-chart-editor-hint {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
 }
 
 /* ---- Toolbar ---- */

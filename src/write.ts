@@ -1,13 +1,14 @@
-import { editableList, propKey } from "./graph";
+import { editableList, propKey, singleText } from "./graph";
 
 /*
  * Note edits, as mutations of a note's parsed frontmatter. They run inside
  * Obsidian's fileManager.processFrontMatter, which reads the note's current
  * text, hands us the parsed object and saves it again.
  *
- * Every property the chart edits (parent, current membership, former
- * members) is a list, so values are always written as a list, even a single
- * one; see ensureListTypes for the matching property type.
+ * The reporting properties (parent, current membership, former members) are
+ * lists, so their values are always written as a list, even a single one;
+ * see ensureListTypes for the matching property type. Card fields edited in
+ * place are single values instead (see PropertyEdit.single).
  */
 
 /** One property to rewrite, with the values the new list was planned from. */
@@ -16,6 +17,11 @@ export interface PropertyEdit {
   values: string[];
   /** The property's values when the edit was planned (from the metadata cache). */
   expected: string[];
+  /**
+   * Write one value rather than a list: `values[0]`, or an empty property
+   * when it's blank. "number" stores numeric text as a number.
+   */
+  single?: "text" | "number";
 }
 
 /** What an edit changed, so it can be undone. */
@@ -26,8 +32,8 @@ export interface WrittenProperty {
   added: boolean;
   /** The value before the edit (a copy). */
   before: unknown;
-  /** The list written (a copy). */
-  written: unknown[];
+  /** The value written (a copy): a list, or a single value for a single edit. */
+  written: unknown;
 }
 
 export interface WrittenNote<T> {
@@ -67,6 +73,13 @@ function listValue(old: unknown, values: string[]): unknown[] {
   return values.map((v) => (originals.has(v) ? originals.get(v) : v));
 }
 
+/** The single value to store for `text` (see PropertyEdit.single): null when blank. */
+function singleValue(text: string, kind: "text" | "number"): unknown {
+  const t = text.trim();
+  if (t === "") return null;
+  return kind === "number" && /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : t;
+}
+
 /**
  * Apply `edits` to a note's freshly parsed frontmatter. Every property must
  * still hold the values the edit was planned from, and only plain text (or
@@ -76,6 +89,12 @@ export function applyEdits(fm: Frontmatter, edits: PropertyEdit[]): WrittenPrope
   // Check everything before changing anything, so a refused edit leaves the note untouched.
   const keys = edits.map((e) => {
     const key = propKey(fm, e.prop) ?? e.prop; // keep the note's spelling, e.g. "Reports_To"
+    if (e.single) {
+      const text = singleText(fm[key]);
+      if (text === null) throw new EditConflictError(`"${key}" doesn't hold a single plain value`);
+      if (text !== (e.expected[0] ?? "")) throw new EditConflictError(`"${key}" changed since the edit was planned`);
+      return key;
+    }
     const list = editableList(fm[key]);
     if (list === null) throw new EditConflictError(`"${key}" holds values that aren't plain text`);
     if (!sameValue(list, e.expected)) throw new EditConflictError(`"${key}" changed since the edit was planned`);
@@ -85,7 +104,7 @@ export function applyEdits(fm: Frontmatter, edits: PropertyEdit[]): WrittenPrope
     const key = keys[i];
     const added = !Object.prototype.hasOwnProperty.call(fm, key);
     const before = added ? undefined : structuredClone(fm[key]);
-    const value = listValue(fm[key], e.values);
+    const value = e.single ? singleValue(e.values[0] ?? "", e.single) : listValue(fm[key], e.values);
     fm[key] = value;
     return { key, added, before, written: structuredClone(value) };
   });

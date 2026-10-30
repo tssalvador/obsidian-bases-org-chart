@@ -65,7 +65,7 @@ HTTP(S) image URLs are blocked by default because loading one contacts its host.
 
 ### Card menu
 
-Right-clicking a card shows the chart's own actions first: **Add dotted-line manager…** and **Remove from …**. With **Note actions on right-click** on (the default), Obsidian's usual actions for the note follow, as on Bases' cards: open, rename, move, copy path, reveal and other plugins' items, with **Delete file** last. Delete uses Obsidian's own prompt, so it asks first unless that's turned off in Obsidian's settings. With the setting off, the menu has only the chart's actions and **Open in new tab**.
+Right-clicking a card shows the chart's own actions first: **Edit fields**, **Add dotted-line manager…** and **Remove from …**. With **Note actions on right-click** on (the default), Obsidian's usual actions for the note follow, as on Bases' cards: open, rename, move, copy path, reveal and other plugins' items, with **Delete file** last. Delete uses Obsidian's own prompt, so it asks first unless that's turned off in Obsidian's settings. With the setting off, the menu has only the chart's actions and **Open in new tab**.
 
 ## Groups and teams
 
